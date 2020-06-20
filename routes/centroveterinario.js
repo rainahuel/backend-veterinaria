@@ -1,136 +1,125 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const authToken = require('../middlewares/autenticacion');
-const jwt = require('jsonwebtoken');
 const app = express();
+let CentroVeterinario = require('../models/centroVeterinario');
+const authToken = require('../middlewares/autenticacion');
 
-let Usuario = require('../models/usuario');
-
-// obtener usuarios
+// obtener centros veterinarios
 app.get('/', (req, resp, next) => {
 
     let desde = req.query.desde || 0;
     desde = Number(desde);
 
-    Usuario.find({}, 'nombre email img role')
+    CentroVeterinario.find({})
+        .populate('usuario', 'nombre email')
         .skip(desde)
         .limit(5)
         .exec(
-            (err, usuarios) => {
+            (err, centrosVeterinarios) => {
                 if (err) {
                     return resp.status(500).json({
                         ok: false,
-                        mensaje: 'Error cargando usuarios',
+                        mensaje: 'Error cargando veterinarias',
                         errors: err
                     });
                 }
-                Usuario.count({}, (err, contador) => {
+                CentroVeterinario.count({}, (err, contador) => {
                     resp.status(200).json({
                         ok: true,
-                        usuarios: usuarios,
+                        centrosVeterinarios,
                         totalRegistros: contador
                     });
                 })
             });
 });
 
-// actualizar usuario
+// actualizar centro veterinario veterinaria
 app.put('/:id', authToken.verificaToken, (req, resp) => {
-
     let id = req.params.id;
     let body = req.body;
 
-    Usuario.findById(id, (err, usuario) => {
-
+    CentroVeterinario.findById(id, (err, centroVeterinario) => {
         if (err) {
             return resp.status(500).json({
                 ok: false,
-                mensaje: 'Error al buscar el usuario',
+                mensaje: 'Error al buscar veterinaria',
                 errors: err
             });
         }
-        if (!usuario) {
+        if (!centroVeterinario) {
             return resp.status(400).json({
                 ok: false,
-                mensaje: `el usuario con el id: ${id}, no existe`,
-                errors: { message: 'no existe un usuario con ese id' }
+                mensaje: `la veterinaria con el id: ${id}, no existe`,
+                errors: { message: 'no existe una veterinaria con ese id' }
             });
         }
 
-        usuario.nombre = body.nombre;
-        usuario.email = body.email;
-        usuario.role = body.role;
+        centroVeterinario.nombre = body.nombre;
+        centroVeterinario.usuario_id = req.usuario._id;
 
-        usuario.save((err, usuarioGuardado) => {
+        centroVeterinario.save((err, centroVeterinarioGuardado) => {
             if (err) {
                 return resp.status(400).json({
                     ok: false,
-                    mensaje: 'Error al actualizar usuario',
+                    mensaje: 'Error al actualizar veterinaria',
                     errors: err
                 });
             }
-            usuarioGuardado.password = '°_°';
             resp.status(200).json({
                 ok: true,
-                usuario: usuarioGuardado
+                centroVeterinario: centroVeterinarioGuardado
             });
         });
     });
 });
 
-// crear usuarios
+// crear centro veterinario
 app.post('/', authToken.verificaToken, (req, resp) => {
 
     let body = req.body;
 
-    let usuario = new Usuario({
+    let centroVeterinario = new CentroVeterinario({
         nombre: body.nombre,
-        email: body.email,
-        password: bcrypt.hashSync(body.password, 10),
-        img: body.img,
-        role: body.role,
+        usuario: req.usuario._id
     });
 
-    usuario.save((err, usuarioGuardado) => {
+    centroVeterinario.save((err, centroVeterinarioGuardado) => {
         if (err) {
             return resp.status(400).json({
                 ok: false,
-                mensaje: 'Error al guardar usuario',
+                mensaje: 'Error al guardar el centro veterinario',
                 errors: err
             });
         }
         resp.status(201).json({
             ok: true,
-            usuario: usuarioGuardado,
-            usuarioToken: req.usuario
+            centroVeterinario: centroVeterinarioGuardado
         });
     });
 });
 
-// eliminar usuario por id
 app.delete('/:id', authToken.verificaToken, (req, resp) => {
 
     let id = req.params.id;
 
-    Usuario.findByIdAndRemove(id, (err, usuarioBorrado) => {
+    CentroVeterinario.findByIdAndRemove(id, (err, centroVeterinarioEliminado) => {
 
         if (err) {
             return resp.status(500).json({
                 ok: false,
-                mensaje: 'Error al borrar usuario',
+                mensaje: 'Error al borrar el centro veterinario',
                 errors: err
             });
         }
-        if (!usuarioBorrado) {
+        if (!centroVeterinarioEliminado) {
             return resp.status(400).json({
                 ok: false,
-                mensaje: 'No existe usuario con ese id',
-                errors: { message: 'No existe usuario con ese id' }
+                mensaje: 'No existe un centro veterinario con ese id',
+                errors: { message: 'No existe centro veterinario con ese id' }
             });
         }
         resp.status(200).json({
             ok: true,
-            usuario: usuarioBorrado
+            centroVeterinario: centroVeterinarioEliminado
         });
     });
 });

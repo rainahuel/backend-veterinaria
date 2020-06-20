@@ -1,136 +1,127 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const authToken = require('../middlewares/autenticacion');
-const jwt = require('jsonwebtoken');
 const app = express();
+let Veterinario = require('../models/veterinario');
+const authToken = require('../middlewares/autenticacion');
 
-let Usuario = require('../models/usuario');
 
-// obtener usuarios
 app.get('/', (req, resp, next) => {
 
     let desde = req.query.desde || 0;
     desde = Number(desde);
 
-    Usuario.find({}, 'nombre email img role')
+    Veterinario.find({})
+        .populate('usuario', 'nombre email')
+        .populate('centroVeterinario')
         .skip(desde)
         .limit(5)
         .exec(
-            (err, usuarios) => {
+            (err, veterinarios) => {
                 if (err) {
                     return resp.status(500).json({
                         ok: false,
-                        mensaje: 'Error cargando usuarios',
+                        mensaje: 'Error cargando veterinarios',
                         errors: err
                     });
                 }
-                Usuario.count({}, (err, contador) => {
+                Veterinario.count({}, (err, contador) => {
                     resp.status(200).json({
                         ok: true,
-                        usuarios: usuarios,
+                        veterinarios,
                         totalRegistros: contador
                     });
                 })
             });
 });
 
-// actualizar usuario
+// actualizar veterinario
 app.put('/:id', authToken.verificaToken, (req, resp) => {
-
     let id = req.params.id;
     let body = req.body;
 
-    Usuario.findById(id, (err, usuario) => {
-
+    Veterinario.findById(id, (err, veterinario) => {
         if (err) {
             return resp.status(500).json({
                 ok: false,
-                mensaje: 'Error al buscar el usuario',
+                mensaje: 'Error al buscar veterinario',
                 errors: err
             });
         }
-        if (!usuario) {
+        if (!veterinario) {
             return resp.status(400).json({
                 ok: false,
-                mensaje: `el usuario con el id: ${id}, no existe`,
-                errors: { message: 'no existe un usuario con ese id' }
+                mensaje: `el veterinario con el id: ${id}, no existe`,
+                errors: { message: 'no existe un veterinario con ese id' }
             });
         }
 
-        usuario.nombre = body.nombre;
-        usuario.email = body.email;
-        usuario.role = body.role;
+        veterinario.nombre = body.nombre;
+        veterinario.usuario = req.usuario._id;
+        veterinario.centroVeterinario = body.centroVeterinario;
 
-        usuario.save((err, usuarioGuardado) => {
+        veterinario.save((err, veterinarioGuardado) => {
             if (err) {
                 return resp.status(400).json({
                     ok: false,
-                    mensaje: 'Error al actualizar usuario',
+                    mensaje: 'Error al actualizar veterinario',
                     errors: err
                 });
             }
-            usuarioGuardado.password = '°_°';
             resp.status(200).json({
                 ok: true,
-                usuario: usuarioGuardado
+                message: veterinarioGuardado
             });
         });
     });
 });
 
-// crear usuarios
+// crear veterinario
 app.post('/', authToken.verificaToken, (req, resp) => {
 
     let body = req.body;
 
-    let usuario = new Usuario({
+    let veterinario = new Veterinario({
         nombre: body.nombre,
-        email: body.email,
-        password: bcrypt.hashSync(body.password, 10),
-        img: body.img,
-        role: body.role,
+        usuario: req.usuario._id,
+        centroVeterinario: body.centroVeterinario
     });
-
-    usuario.save((err, usuarioGuardado) => {
+    veterinario.save((err, veterinarioGuardado) => {
         if (err) {
             return resp.status(400).json({
                 ok: false,
-                mensaje: 'Error al guardar usuario',
+                mensaje: 'Error al guardar veterinario',
                 errors: err
             });
         }
         resp.status(201).json({
             ok: true,
-            usuario: usuarioGuardado,
-            usuarioToken: req.usuario
+            veterinario: veterinarioGuardado
         });
     });
-});
+})
 
-// eliminar usuario por id
+// eliminar veterinario
 app.delete('/:id', authToken.verificaToken, (req, resp) => {
 
     let id = req.params.id;
 
-    Usuario.findByIdAndRemove(id, (err, usuarioBorrado) => {
-
+    Veterinario.findByIdAndRemove(id, (err, veterinarioBorrado) => {
         if (err) {
             return resp.status(500).json({
                 ok: false,
-                mensaje: 'Error al borrar usuario',
+                mensaje: 'Error al borrar veterinario',
                 errors: err
             });
         }
-        if (!usuarioBorrado) {
+        if (!veterinarioBorrado) {
             return resp.status(400).json({
                 ok: false,
-                mensaje: 'No existe usuario con ese id',
-                errors: { message: 'No existe usuario con ese id' }
+                mensaje: 'No existe veterinario con ese id',
+                errors: { message: 'No existe veterinario con ese id' }
             });
         }
         resp.status(200).json({
             ok: true,
-            usuario: usuarioBorrado
+            veterinario: veterinarioBorrado
         });
     });
 });

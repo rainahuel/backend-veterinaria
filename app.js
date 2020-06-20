@@ -14,17 +14,29 @@ app.use(express.json());
 const appRoutes = require('./routes/app');
 const usuarioRoutes = require('./routes/usuario');
 const loginRoutes = require('./routes/login');
+const centroVeterinarioRoutes = require('./routes/centroVeterinario');
+const veterinarioRoutes = require('./routes/veterinario');
+const busquedaRoutes = require('./routes/busqueda');
+const uploadRouted = require('./routes/upload');
+const imagenesRouted = require('./routes/imagenes');
 
 // conexion a la base de datos
 mongoose.connection.openUri('mongodb://localhost:27017/veterinaria', (err, resp) => {
     if (err) throw err;
     console.log('Base de datos: \x1b[32m%s\x1b[0m', 'online');
-})
+});
 
 // rutas
+app.use('/img', imagenesRouted);
+app.use('/upload', uploadRouted);
+app.use('/busqueda', busquedaRoutes);
+app.use('/veterinario', veterinarioRoutes);
+app.use('/centroVeterinario', centroVeterinarioRoutes);
 app.use('/usuario', usuarioRoutes);
 app.use('/login', loginRoutes);
 app.use('/', appRoutes);
+
+
 
 // escuchar peticiones
 app.listen(3000, () => {
